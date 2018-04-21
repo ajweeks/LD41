@@ -9,6 +9,8 @@ public class PlayerController : MonoBehaviour {
 
     public float AirMoveScale = 0.1f;
 
+    public float MaxForwardSpeed = 40.0f;
+
     public float TubeWidth = 20.0f;
     //public float TubeLength = 400.0f;
     public float TubeAngleDeg = 15.0f;
@@ -47,19 +49,19 @@ public class PlayerController : MonoBehaviour {
             tubeLocation = Mathf.Clamp(tubeLocation, -1.0f, 1.0f);
 
             Vector3 tubeNormal = new Vector3(-tubeLocation, 1.0f - Mathf.Abs(tubeLocation), 0.0f).normalized;
-            Quaternion tubeRotationQuat = Quaternion.Euler(new Vector3(Mathf.Deg2Rad * TubeAngleDeg, 0.0f, 0.0f));
-            tubeNormal = tubeRotationQuat * tubeNormal;
             Vector3 tubeForward = new Vector3(
                 0.0f, 
-                Mathf.Sin(Mathf.Deg2Rad * TubeAngleDeg), 
+                -Mathf.Sin(Mathf.Deg2Rad * TubeAngleDeg), 
                 Mathf.Cos(Mathf.Deg2Rad * TubeAngleDeg)).normalized;
             Vector3 tubeRight = Vector3.Cross(tubeNormal, tubeForward);
+
+            tubeNormal = Vector3.Cross(tubeForward, tubeRight);
 
             Debug.DrawLine(transform.position, transform.position + tubeNormal * 10.0f, Color.green);
             Debug.DrawLine(transform.position, transform.position + tubeForward * 10.0f, Color.blue);
             Debug.DrawLine(transform.position, transform.position + tubeRight * 10.0f, Color.red);
 
-            bool grounded = Physics.Raycast(transform.position, -tubeNormal, 10.0f);
+            bool grounded = Physics.Raycast(transform.position, -tubeNormal, 4.0f);
 
             float moveScale = 1.0f;
             if (!grounded)
@@ -72,15 +74,20 @@ public class PlayerController : MonoBehaviour {
             float horizontal = Input.GetAxis("Horizontal");
             float vertical = Input.GetAxis("Vertical");
 
-            Vector3 forward = tubeForward; // followCamera.transform.forward;
-            //forward.y = 0.0f;
-            //forward.Normalize();
-            Vector3 right = tubeRight; // followCamera.transform.right;
+            Vector3 forward = tubeForward;
+            Vector3 right = tubeRight;
 
             force += right * horizontal * SidewaysMoveForce * Time.fixedDeltaTime * moveScale;
             force += forward * vertical * ForwardMoveForce * Time.fixedDeltaTime * moveScale;
 
             rb.AddForce(force);
+
+            if (Vector3.Dot(rb.velocity, forward) > MaxForwardSpeed)
+            {
+                Debug.Log(rb.velocity.magnitude);
+                rb.velocity = new Vector3(rb.velocity.x, rb.velocity.y, MaxForwardSpeed);
+                Debug.Log(rb.velocity.magnitude);
+            }
 
             if (Mathf.Approximately(Mathf.Abs(tubeLocation), 1.0f))
             {
