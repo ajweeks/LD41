@@ -1,36 +1,111 @@
 ﻿using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour {
 
+    // If true all player controls are disabled
+    [HideInInspector]
+    public bool roundOver = false;
+
+    public float AirMoveScale = 0.1f;
+
+    public float TubeWidth = 20.0f;
+    //public float TubeLength = 400.0f;
+    public float TubeAngleDeg = 15.0f;
+
     public FollowCamera followCamera;
 
-    public float SidewaysMoveForce = 10000.0f;
-    public float ForwardMoveForce = 100.0f;
+    public float SidewaysMoveForce = 11000.0f;
+    public float ForwardMoveForce = 2000.0f;
+
+    public float SlowDownSpeed = 30.0f;
+
+    private float startTime = 0.0f;
+    private float endTime = 0.0f;
+
+    public Image GameOverPanel;
+    public Text FinalTimeText;
 
     [HideInInspector]
     public Rigidbody rb;
 
     void Start () {
+        GameOverPanel.gameObject.SetActive(false);
+
         rb = GetComponent<Rigidbody>();
+        startTime = Time.time;
     }
 	
 	void FixedUpdate () {
-        Vector3 force = new Vector3();
+        if (roundOver)
+        {
+            rb.AddForce(-rb.velocity * Time.fixedDeltaTime * SlowDownSpeed);
+        }
+        else
+        {
+            float tubeLocation = transform.position.x / TubeWidth;
+            tubeLocation = Mathf.Clamp(tubeLocation, -1.0f, 1.0f);
 
-        float horizontal = Input.GetAxis("Horizontal");
-        float vertical = Input.GetAxis("Vertical");
+            Vector3 tubeNormal = new Vector3(-tubeLocation, 1.0f - Mathf.Abs(tubeLocation), 0.0f).normalized;
+            Quaternion tubeRotationQuat = Quaternion.Euler(new Vector3(Mathf.Deg2Rad * TubeAngleDeg, 0.0f, 0.0f));
+            tubeNormal = tubeRotationQuat * tubeNormal;
+            Vector3 tubeForward = new Vector3(
+                0.0f, 
+                Mathf.Sin(Mathf.Deg2Rad * TubeAngleDeg), 
+                Mathf.Cos(Mathf.Deg2Rad * TubeAngleDeg)).normalized;
+            Vector3 tubeRight = Vector3.Cross(tubeNormal, tubeForward);
 
-        Vector3 forward = followCamera.transform.forward;
-        forward.y = 0.0f;
-        forward.Normalize();
-        Vector3 right = followCamera.transform.right;
+            Debug.DrawLine(transform.position, transform.position + tubeNormal * 10.0f, Color.green);
+            Debug.DrawLine(transform.position, transform.position + tubeForward * 10.0f, Color.blue);
+            Debug.DrawLine(transform.position, transform.position + tubeRight * 10.0f, Color.red);
 
-        force += right * horizontal * SidewaysMoveForce * Time.fixedDeltaTime;
-        force += forward * vertical * ForwardMoveForce * Time.fixedDeltaTime;
+            bool grounded = Physics.Raycast(transform.position, -tubeNormal, 10.0f);
 
-        rb.AddForce(force);
+            float moveScale = 1.0f;
+            if (!grounded)
+            {
+                moveScale = AirMoveScale;
+            }
 
-        Debug.DrawLine(transform.position, transform.position + forward * 10, Color.blue);
-        Debug.DrawLine(transform.position, transform.position + right * 10, Color.red);
+            Vector3 force = new Vector3();
+
+            float horizontal = Input.GetAxis("Horizontal");
+            float vertical = Input.GetAxis("Vertical");
+
+            Vector3 forward = tubeForward; // followCamera.transform.forward;
+            //forward.y = 0.0f;
+            //forward.Normalize();
+            Vector3 right = tubeRight; // followCamera.transform.right;
+
+            force += right * horizontal * SidewaysMoveForce * Time.fixedDeltaTime * moveScale;
+            force += forward * vertical * ForwardMoveForce * Time.fixedDeltaTime * moveScale;
+
+            rb.AddForce(force);
+
+            if (Mathf.Approximately(Mathf.Abs(tubeLocation), 1.0f))
+            {
+                // At edge of tube we might have residual velocity outwards which would cause us to 
+                // fall out of pipe!
+                rb.velocity = new Vector3(0.0f, rb.velocity.y, rb.velocity.z);
+            }
+
+
+            GameObject.FindGameObjectWithTag("DebugText").GetComponent<Text>().text = grounded ? "grounded: true" : "grounded: false";
+
+            //Debug.DrawLine(transform.position, transform.position + forward * 10, Color.blue);
+            //Debug.DrawLine(transform.position, transform.position + right * 10, Color.red);
+        }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("finish"))
+        {
+            roundOver = true;
+            endTime = Time.time;
+
+            GameOverPanel.gameObject.SetActive(true);
+            FinalTimeText.text = "Final time: " + endTime.ToString();
+        }
     }
 }

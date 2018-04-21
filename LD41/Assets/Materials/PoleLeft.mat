@@ -6,7 +6,7 @@ Material:
   m_ObjectHideFlags: 0
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
-  m_Name: Poles
+  m_Name: PoleLeft
   m_Shader: {fileID: 47, guid: 0000000000000000f000000000000000, type: 0}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
@@ -76,5 +76,5 @@ Material:
     - _UVSec: 0
     - _ZWrite: 1
     m_Colors:
-    - _Color: {r: 0.88235295, g: 0.32439446, b: 0.32439446, a: 1}
+    - _Color: {r: 0.37640572, g: 0.50175685, b: 0.86764705, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
